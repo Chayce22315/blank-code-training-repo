@@ -45,10 +45,12 @@ TRAIN_CONFIGS = {
 def parameter_count_hint(name: str) -> int:
     """Return an approximate parameter count without constructing a model."""
     cfg = MODEL_CONFIGS[name]
-    # token + position embeddings, attention/MLP blocks, and final projection;
-    # output weights are tied to token embeddings in the model.
-    d, v, layers = cfg.d_model, cfg.vocab_size, cfg.n_layers
-    return v * d + cfg.context_length * d + layers * (4 * d * d + 8 * d * d) + 2 * d + v * d
+    # The LM head shares the token embedding weights, so count that matrix once.
+    d, v, context, layers = cfg.d_model, cfg.vocab_size, cfg.context_length, cfg.n_layers
+    embedding_params = v * d + context * d
+    block_params = layers * (12 * d * d + 9 * d)
+    final_norm_params = 2 * d
+    return embedding_params + block_params + final_norm_params
 
 
 def as_dict(name: str) -> dict:
