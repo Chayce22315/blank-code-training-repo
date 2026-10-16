@@ -28,7 +28,7 @@ def main():
     parser.add_argument("--config", choices=MODEL_CONFIGS, default="blank")
     parser.add_argument("--data", default="data/train", help="text file or directory of permitted text files")
     parser.add_argument("--validation-data", default="data/validation", help="optional validation directory; skipped if empty")
-    parser.add_argument("--steps", type=int, default=200)
+    parser.add_argument("--steps", type=int, default=200, help="number of additional optimizer steps to run")
     parser.add_argument("--output", default=None)
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--resume", default=None, help="checkpoint path to resume model and optimizer state")
@@ -68,15 +68,20 @@ def main():
             print(f"torch.compile unavailable, continuing without it: {exc}")
     output = Path(args.output or f"checkpoints/{args.config}")
     output.mkdir(parents=True, exist_ok=True)
-    print(f"model={args.config} device={device} parameters={sum(p.numel() for p in model.parameters()):,}")
+    raw_model = model._orig_mod if hasattr(model, "_orig_mod") else model
+    print(f"model={args.config} device={device} parameters={sum(p.numel() for p in raw_model.parameters()):,}")
     print(f"training_bytes={train_tokens.numel()} context={model_cfg.context_length} output={output}")
     model.train()
     optimizer.zero_grad(set_to_none=True)
     started = time.time()
-    for step in range(start_step + 1, start_step + args.steps + 1):
-        lr_scale = min(step / 20, 1.0) * 0.5 * (1.0 + math.cos(math.pi * min(step, args.steps) / max(args.steps, 1)))
+    final_step = start_step + args.steps
+    for step in range(start_step + 1, final_step + 1):
+        local_step = step - start_step
+        warmup = min(local_step / 20, 1.0)
+        cosine = 0.5 * (1.0 + math.cos(math.pi * local_step / max(args.steps, 1)))
+        lr_scale = max(warmup * cosine, 0.05)
         for group in optimizer.param_groups:
-            group["lr"] = train_cfg.learning_rate * max(lr_scale, 0.05)
+            group["lr"] = train_cfg.learning_rate * lr_scale
         accum_loss = 0.0
         for _ in range(train_cfg.grad_accum_steps):
             x, y = get_batch(train_tokens, train_cfg.batch_size, model_cfg.context_length, device)
@@ -94,7 +99,7 @@ def main():
                 except ValueError as exc:
                     msg += f" val_loss=skipped ({exc})"
             print(msg, flush=True)
-        if step % train_cfg.save_every == 0 or step == start_step + args.steps:
+        if step % train_cfg.save_every == 0 or step == final_step:
             raw_model = model._orig_mod if hasattr(model, "_orig_mod") else model
             state = {
                 "model": raw_model.state_dict(), "optimizer": optimizer.state_dict(), "step": step,
