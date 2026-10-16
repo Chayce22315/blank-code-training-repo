@@ -1,0 +1,15 @@
+blank is a small language model experiment. this text is only a toy corpus for testing the training pipeline, not a useful dataset.
+
+a language model learns to predict the next token from previous tokens. during training, the model sees a sequence of bytes and learns which byte is likely to come next. the model begins with random weights. training changes those weights using examples and an optimizer.
+
+blank is designed for everyday use as a future goal. bigbang is the regular-use tier. supernova is the largest model in the family. these names describe the intended product tiers, not proven capabilities. larger models need more data and compute, and size alone does not guarantee better answers.
+
+good training data needs clear permission, a known license, and careful filtering. publicly visible text is not automatically free to reuse. private information, passwords, confidential documents, and personal records should never be added to a training corpus.
+
+the first milestone is simple: load text, tokenize it, train a small transformer, save a checkpoint, and load that checkpoint for text generation. a tiny repeated corpus can verify that the code works, but it cannot teach broad knowledge or reliable reasoning.
+
+testing matters. training loss should be tracked over time, and a separate validation set should be used to detect overfitting. the same evaluation examples should be used when comparing blank, bigbang, and supernova. results should include the model configuration, training tokens, compute time, and memory use.
+
+this is a synthetic demonstration document written for the repository. it is not intended to represent real-world knowledge. repeatable experiments are more useful than unsupported claims. build the pipeline first, then improve the data and measure what the model actually learns.
+
+blank model family. byte tokenizer. causal attention. transformer block. next token prediction. training loop. checkpoint. validation. evaluation. reproducibility. licensed data. local experiments. blank bigbang supernova.
