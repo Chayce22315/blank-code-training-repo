@@ -36,6 +36,20 @@ pip install -r requirements.txt
 python -m blank_model.train --config blank --data data/train --steps 200 --output checkpoints/blank
 ```
 
+## get a starter dataset
+
+a streaming preparation script can fetch a small sample from selected public Hugging Face datasets, filter empty/short rows, remove exact duplicates, and write train/validation text files plus a manifest.
+
+```powershell
+pip install -r requirements-data.txt
+python scripts/prepare_datasets.py --dataset tinystories --max-samples 5000
+python -m blank_model.train --config blank --data data/train/tinystories.txt --validation-data data/validation --steps 200 --output checkpoints/tinystories
+```
+
+available sources and data-handling notes are documented in [the dataset starter pack](docs/DATASET_STARTER_PACK.md). review each dataset's current card, source terms, and license before use. streaming avoids downloading the full dataset, but the loader still needs internet access and may cache data. downloaded datasets are intentionally excluded from Git.
+
+## smoke test
+
 if you only want to test that the model code runs, use the included smoke test. it generates random weights and checks a forward pass; it does **not** prove language learning.
 
 ```powershell
@@ -47,7 +61,7 @@ python -m blank_model.smoke_test
 after training, use the checkpoint directory printed by the trainer:
 
 ```powershell
-python -m blank_model.generate --checkpoint checkpoints/blank/latest.pt --prompt "hello"
+python -m blank_model.generate --checkpoint checkpoints/tinystories/latest.pt --prompt "hello"
 ```
 
 the tokenizer is byte-level to keep the first version dependency-light and transparent. it is deliberately basic and inefficient compared with a trained subword tokenizer. model outputs may be incoherent until enough suitable data and training compute are available.
@@ -55,7 +69,7 @@ the tokenizer is byte-level to keep the first version dependency-light and trans
 ## data rules
 
 - only use data you own, have permission to use, or whose license permits the intended use.
-- record each source, license, download date, and any filtering in `data/manifest.csv`.
+- record each source, license, download date, and any filtering in `data/manifest.csv` and generated manifests.
 - do not assume that publicly accessible means freely reusable.
 - keep private, personal, confidential, and credential data out of training sets.
 - do not commit datasets, checkpoints, or large generated files to git.
@@ -66,14 +80,15 @@ the tokenizer is byte-level to keep the first version dependency-light and trans
 2. [x] configs for the three model sizes
 3. [x] training loop, checkpoints, and text generation
 4. [x] basic smoke tests
-5. [ ] build a small, documented, license-reviewed dataset
+5. [x] starter dataset preparation script and documentation
 6. [ ] establish validation loss and repeatable benchmarks
-7. [ ] add instruction data and chat formatting only after base training is stable
+7. [ ] add dedicated instruction fine-tuning and chat formatting after base training is stable
 8. [ ] evaluate each model before making capability claims
 
 ## current limitations
 
 - byte-level tokens mean long contexts cost more compute than subword tokens.
 - the starter data loader reads the selected text files into memory; keep the first dataset small.
+- the dataset script currently deduplicates exact matches within one run, not across every source or previously downloaded corpus.
 - no pretrained weights are used. every parameter begins randomly initialized.
 - this is an educational base-model pipeline, not a production chatbot or coding model.
