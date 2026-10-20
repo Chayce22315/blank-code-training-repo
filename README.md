@@ -52,6 +52,23 @@ python -m blank_model.train --config blank --data data/train/tinystories.txt --v
 
 available sources and data-handling notes are documented in [the dataset starter pack](docs/DATASET_STARTER_PACK.md). review each dataset's current card, source terms, and license before use. streaming avoids downloading the full dataset, but the loader still needs internet access and may cache data. downloaded datasets are intentionally excluded from Git.
 
+## one-command from-scratch training (windows)
+
+From the repository root in PowerShell, after creating the virtual environment and installing the CUDA-enabled PyTorch build as described above:
+
+```powershell
+pip install -r requirements-data.txt
+powershell -ExecutionPolicy Bypass -File .\scripts\train_from_scratch.ps1
+```
+
+This prepares modest streamed samples from TinyStories, FineWeb-Edu, CodeFeedback, and CodeAlpaca, then trains the randomly initialized `blank` model. By default, data, manifests, checkpoints, and run metadata go under `$env:USERPROFILE\Downloads\blank-training-run\`, so large artifacts stay out of Git. The default run is 2,000 optimizer steps; you can adjust it, for example:
+
+```powershell
+.\scripts\train_from_scratch.ps1 -Model blank -Steps 5000
+```
+
+The script needs internet access for Hugging Face and can take a while. Review dataset licenses and source terms before use or redistribution. Training from scratch on a small sample is a real training run, but it will not produce a strong coding assistant by itself. The first goal is a stable loss curve and reproducible checkpoints.
+
 ## smoke test
 
 if you only want to test that the model code runs, use the included smoke test. it generates random weights and checks a forward pass; it does **not** prove language learning.
