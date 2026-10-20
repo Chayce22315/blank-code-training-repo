@@ -5,6 +5,9 @@ Examples:
   python scripts/prepare_datasets.py --dataset tinystories --split train --max-samples 50000
   python scripts/prepare_datasets.py --dataset fineweb-edu --split train --max-samples 10000
   python scripts/prepare_datasets.py --dataset smol-smoltalk --split train --max-samples 20000
+  python scripts/prepare_datasets.py --dataset codefeedback --max-samples 5000
+  python scripts/prepare_datasets.py --dataset opencodegenetic --max-samples 5000
+  python scripts/prepare_datasets.py --dataset codealpaca --max-samples 4000
 
 This script writes plain UTF-8 text files for the existing next-token trainer.
 It does not download model weights or upload any data. Check each dataset card
@@ -35,6 +38,21 @@ DATASETS = {
         "text_columns": ("messages", "text", "conversation"),
         "license_note": "Apache-2.0 dataset card; verify source and current terms",
     },
+    "codefeedback": {
+        "path": "m-a-p/CodeFeedback-Filtered-Instruction",
+        "text_columns": ("text", "messages", "instruction", "query", "question", "prompt", "output", "answer", "response"),
+        "license_note": "Apache-2.0 dataset card; includes some model-generated data; review source terms",
+    },
+    "opencodegenetic": {
+        "path": "nvidia/OpenCodeGeneticInstruct",
+        "text_columns": ("text", "messages", "input", "instruction", "prompt", "output", "solution", "answer"),
+        "license_note": "CC-BY-4.0; synthetic Python coding instructions; attribution required",
+    },
+    "codealpaca": {
+        "path": "graycatHCO3/CodeAlpaca-20K-Python",
+        "text_columns": ("text", "messages", "prompt", "instruction", "input", "completion", "output", "response"),
+        "license_note": "Apache-2.0 dataset card; Python-focused; verify current card",
+    },
 }
 
 
@@ -46,30 +64,47 @@ def clean_text(value: str) -> str:
 
 
 def row_to_text(row: dict[str, Any], columns: Iterable[str]) -> str:
+    # Preserve full chat conversations when datasets store role/content arrays.
     for column in columns:
         value = row.get(column)
-        if isinstance(value, str):
-            return clean_text(value)
         if isinstance(value, list):
-            # Chat datasets commonly store messages as {role, content} records.
             parts = []
             for message in value:
                 if isinstance(message, dict):
-                    role = str(message.get("role", "assistant")).strip()
-                    content = message.get("content", "")
+                    role = str(message.get("role", message.get("from", "assistant"))).strip()
+                    content = message.get("content", message.get("value", ""))
                     if isinstance(content, str) and content.strip():
                         parts.append(f"{role}: {clean_text(content)}")
             if parts:
                 return "\n".join(parts)
+
+    # Keep both sides of instruction-tuning examples, not just prompts.
+    prompt_keys = ("instruction", "prompt", "query", "question", "problem", "input")
+    context_keys = ("context", "additional_input")
+    answer_keys = ("output", "completion", "response", "answer", "solution")
+    prompt_parts = [clean_text(row[key]) for key in prompt_keys
+                    if isinstance(row.get(key), str) and row[key].strip()]
+    context_parts = [clean_text(row[key]) for key in context_keys
+                     if isinstance(row.get(key), str) and row[key].strip()]
+    answer_parts = [clean_text(row[key]) for key in answer_keys
+                    if isinstance(row.get(key), str) and row[key].strip()]
+    if prompt_parts and answer_parts:
+        prompt = "\n".join(prompt_parts)
+        if context_parts:
+            prompt += "\n\ncontext:\n" + "\n".join(context_parts)
+        return f"instruction:\n{prompt}\n\nresponse:\n" + "\n".join(answer_parts)
+
+    # Plain-text corpora such as FineWeb-Edu use a single text field.
+    for column in columns:
+        value = row.get(column)
+        if isinstance(value, str) and value.strip():
+            return clean_text(value)
         if isinstance(value, dict):
-            parts = []
-            for key, item in value.items():
-                if isinstance(item, str) and item.strip():
-                    parts.append(f"{key}: {clean_text(item)}")
+            parts = [f"{key}: {clean_text(item)}" for key, item in value.items()
+                     if isinstance(item, str) and item.strip()]
             if parts:
                 return "\n".join(parts)
     return ""
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
