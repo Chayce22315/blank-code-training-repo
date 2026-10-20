@@ -7,6 +7,9 @@ This guide describes a small first dataset mix for experimenting with the blank 
 1. **TinyStories** for a tiny pipeline check and simple narrative text. Dataset card: https://huggingface.co/datasets/roneneldan/TinyStories
 2. **FineWeb-Edu** for educational web text. Start with a small streamed sample; the full dataset is enormous. Dataset card: https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu
 3. **Smol-SmolTalk** for assistant-style conversations. This is supervised fine-tuning style data, not a replacement for broad pretraining text. Dataset card: https://huggingface.co/datasets/HuggingFaceTB/smol-smoltalk
+4. **CodeFeedback-Filtered-Instruction** for more challenging coding questions and answers. The card lists Apache-2.0 and notes that some data is model-generated. Dataset card: https://huggingface.co/datasets/m-a-p/CodeFeedback-Filtered-Instruction
+5. **OpenCodeGeneticInstruct** for synthetic Python coding tasks and solutions. The card lists CC-BY-4.0, so preserve attribution and review the terms. Dataset card: https://huggingface.co/datasets/nvidia/OpenCodeGeneticInstruct
+6. **CodeAlpaca-20K-Python** for a small Python instruction/answer dataset. The card lists Apache-2.0. Dataset card: https://huggingface.co/datasets/graycatHCO3/CodeAlpaca-20K-Python
 
 Check the linked dataset card, source terms, attribution requirements, and current revision before using any dataset. Licenses and terms can vary by source or change over time. Do not redistribute raw datasets or a derived bundle unless their terms allow it. Keep source URLs, revisions, dates, filtering settings, and license notes with the dataset.
 
@@ -35,6 +38,15 @@ python scripts/prepare_datasets.py --dataset fineweb-edu --max-samples 10000
 
 # Small assistant-conversation sample
 python scripts/prepare_datasets.py --dataset smol-smoltalk --max-samples 5000
+
+# More challenging code instruction/answer examples
+python scripts/prepare_datasets.py --dataset codefeedback --max-samples 5000
+
+# Synthetic Python coding problems and solutions (CC-BY-4.0 attribution required)
+python scripts/prepare_datasets.py --dataset opencodegenetic --max-samples 5000
+
+# Small Python-only coding instruction set
+python scripts/prepare_datasets.py --dataset codealpaca --max-samples 4000
 ```
 
 The script streams rows, filters empty/short entries, removes exact duplicates, makes a deterministic train/validation split, and writes UTF-8 text files under `data/train/` and `data/validation/`. It also writes a JSON manifest. It does not upload your data.
@@ -43,7 +55,7 @@ The first run needs internet access and may need to download dataset metadata/ca
 
 ## Train
 
-The current trainer is a **plain next-token language-modeling trainer**. It does not yet implement a dedicated instruction fine-tuning loss or chat-template handling. You can experiment with the text export like this:
+The current trainer is a **plain next-token language-modeling trainer**. It does not yet implement a dedicated instruction fine-tuning loss or chat-template handling. The new code datasets are exported as text for continued pretraining experiments; this is not equivalent to supervised fine-tuning that masks the user prompt and trains on the assistant answer only. You can experiment with the text export like this:
 
 ```powershell
 python -m blank_model.train --config blank --data data/train/tinystories.txt --steps 200 --output checkpoints/tinystories
