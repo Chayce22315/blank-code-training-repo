@@ -81,7 +81,10 @@ def load_code_dataset(dataset_id: str, requested: int, seed: int, source_label: 
         pair = pair_from_row(row)
         if pair:
             prompt, response = pair
-            if len(prompt) >= 6 and len(response) >= 8:
+            # Keep answers short enough to fit the model's context alongside a useful prompt.
+            # Longer outputs are skipped instead of teaching truncated code fragments.
+            response_bytes = len(response.encode("utf-8"))
+            if len(prompt) >= 6 and 8 <= response_bytes <= 128:
                 add_record(records, "solve this programming task. provide a direct answer:\n" + prompt,
                            response, "coding", source_label)
         if len(records) >= requested:
@@ -110,7 +113,9 @@ def load_story_dataset(requested: int, seed: int):
         if sentence_end is not None:
             cut = sentence_end + 1
         prefix = story[:cut].strip()
-        continuation = story[cut:].strip()[:220]
+        continuation = story[cut:].strip()[:120]
+        while len(continuation.encode("utf-8")) > 128:
+            continuation = continuation[:-1]
         if len(prefix) < 25 or len(continuation) < 15:
             continue
         add_record(records, "continue this story in the same style:\n" + prefix, continuation,
