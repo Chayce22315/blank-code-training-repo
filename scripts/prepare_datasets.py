@@ -45,6 +45,7 @@ DATASETS = {
     },
     "opencodegenetic": {
         "path": "nvidia/OpenCodeGeneticInstruct",
+        "config_name": "qwen2.5-32b-instruct",
         "text_columns": ("text", "messages", "input", "instruction", "prompt", "output", "solution", "answer"),
         "license_note": "CC-BY-4.0; synthetic Python coding instructions; attribution required",
     },
@@ -137,7 +138,13 @@ def main() -> None:
     print(f"maximum accepted samples: {args.max_samples:,}")
     print("loading in streaming mode; this does not download the entire dataset")
 
-    stream = load_dataset(spec["path"], split=args.split, streaming=True)
+    if spec.get("config_name"):
+        print(f"config: {spec['config_name']}")
+        stream = load_dataset(
+            spec["path"], spec["config_name"], split=args.split, streaming=True
+        )
+    else:
+        stream = load_dataset(spec["path"], split=args.split, streaming=True)
     # Deterministic shuffle buffer avoids simply taking the first shard rows.
     stream = stream.shuffle(seed=args.seed, buffer_size=min(10_000, max(100, args.max_samples)))
     texts: list[str] = []
