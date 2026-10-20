@@ -81,6 +81,20 @@ The script expects the child checkpoint at `Downloads\\blank-training-run\\check
 
 This is **coding-focused continued next-token training**, not yet dedicated supervised fine-tuning. It keeps the same architecture and 256-token context, so this stage tests the effect of better-targeted data rather than changing several variables at once. Review dataset cards and licenses before use.
 
+## stage 4: blank-hybrid (coding + arithmetic + stories)
+
+Once the pre-teen checkpoint exists, run this stage from the repository root in PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\train_hybrid.ps1
+```
+
+The hybrid script prepares up to 5,000 examples: 2,000 coding examples split across CodeFeedback and CodeAlpaca, 1,500 TinyStories continuations, and 1,500 locally generated arithmetic question/answer pairs. The actual accepted counts are written to `Downloads\blank-training-run\hybrid-data\manifest.json`; dataset streaming can return fewer usable records than requested.
+
+It then performs 2,000 additional optimizer steps of **response-masked supervised fine-tuning**: blank sees the prompt but the loss is calculated on the answer tokens, unlike the previous stage's ordinary next-token corpus training. The original child and pre-teen checkpoints remain unchanged. The new checkpoint is `Downloads\blank-training-run\checkpoints\blank-hybrid\latest.pt`.
+
+The model still uses byte-level tokens and a 256-token context. This hybrid objective is a more appropriate experiment for practicing answers, but it does not guarantee reliable coding or arithmetic; compare generated samples and validation loss before judging the result. Review each public dataset's current license and source terms before use or redistribution.
+
 ## smoke test
 
 if you only want to test that the model code runs, use the included smoke test. it generates random weights and checks a forward pass; it does **not** prove language learning.
