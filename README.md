@@ -43,6 +43,10 @@ a streaming preparation script can fetch a small sample from selected public Hug
 ```powershell
 pip install -r requirements-data.txt
 python scripts/prepare_datasets.py --dataset tinystories --max-samples 5000
+# coding-focused samples (review dataset cards and attribution requirements first)
+python scripts/prepare_datasets.py --dataset codefeedback --max-samples 5000
+python scripts/prepare_datasets.py --dataset opencodegenetic --max-samples 5000
+python scripts/prepare_datasets.py --dataset codealpaca --max-samples 4000
 python -m blank_model.train --config blank --data data/train/tinystories.txt --validation-data data/validation --steps 200 --output checkpoints/tinystories
 ```
 
