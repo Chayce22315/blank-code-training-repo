@@ -4,6 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from .configs import ModelConfig
+from .tokenizer import BOS, EOS, PAD
 
 
 class CausalSelfAttention(nn.Module):
@@ -96,11 +97,24 @@ class BlankLanguageModel(nn.Module):
                  top_k: int = 40) -> torch.Tensor:
         if temperature <= 0:
             raise ValueError("temperature must be positive")
+        if idx.ndim != 2 or idx.size(1) == 0:
+            raise ValueError("idx must be a non-empty [batch, sequence] tensor")
         self.eval()
+        finished = torch.zeros(idx.size(0), dtype=torch.bool, device=idx.device)
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -self.config.context_length:]
             logits, _ = self(idx_cond)
             logits = logits[:, -1, :] / temperature
+
+            # These are control tokens, not printable text. Never generate BOS
+            # or PAD as content. EOS ends a supervised answer, so stop when it
+            # is produced instead of continuing into unrelated token soup.
+            logits[:, BOS] = -float("inf")
+            logits[:, PAD] = -float("inf")
+            if finished.any():
+                logits[finished, :] = -float("inf")
+                logits[finished, EOS] = 0.0
+
             if top_k > 0:
                 k = min(top_k, logits.size(-1))
                 values, _ = torch.topk(logits, k)
@@ -108,4 +122,7 @@ class BlankLanguageModel(nn.Module):
             probs = F.softmax(logits, dim=-1)
             next_id = torch.multinomial(probs, num_samples=1)
             idx = torch.cat((idx, next_id), dim=1)
+            finished |= next_id.squeeze(1).eq(EOS)
+            if bool(finished.all()):
+                break
         return idx
