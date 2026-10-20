@@ -69,6 +69,18 @@ This prepares modest streamed samples from TinyStories, FineWeb-Edu, CodeFeedbac
 
 The script needs internet access for Hugging Face and can take a while. Review dataset licenses and source terms before use or redistribution. Training from scratch on a small sample is a real training run, but it will not produce a strong coding assistant by itself. The first goal is a stable loss curve and reproducible checkpoints.
 
+## continue training: blank-child -> blank-preteen (windows)
+
+After completing the initial run with the default script, you can continue the existing `blank` checkpoint on coding-focused instruction data:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\\scripts\\train_preteen.ps1
+```
+
+The script expects the child checkpoint at `Downloads\\blank-training-run\\checkpoints\\blank\\latest.pt`. It downloads modest samples from CodeFeedback, OpenCodeGeneticInstruct, and CodeAlpaca, then resumes the same model and optimizer for 2,000 additional steps. It writes the new checkpoint to `Downloads\\blank-training-run\\checkpoints\\blank-preteen\\latest.pt`; it does not overwrite the original child checkpoint. Adjust `-Steps` and the dataset sample parameters if needed.
+
+This is **coding-focused continued next-token training**, not yet dedicated supervised fine-tuning. It keeps the same architecture and 256-token context, so this stage tests the effect of better-targeted data rather than changing several variables at once. Review dataset cards and licenses before use.
+
 ## smoke test
 
 if you only want to test that the model code runs, use the included smoke test. it generates random weights and checks a forward pass; it does **not** prove language learning.
